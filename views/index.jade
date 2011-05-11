@@ -1,0 +1,16 @@
+p Hi there! Let's get started.
+ul
+    li
+        | Simply 
+        a(href='/auth') connect
+        |  your twitter account with the site
+
+    li Your favourites will be searched and expanded below
+
+    li Share and share alike!
+
+#favourites
+    - if (authed === true)
+        p well done, authed
+    - else
+        p not authed
