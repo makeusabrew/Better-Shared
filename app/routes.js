@@ -29,8 +29,16 @@ module.exports = function(app) {
             } else {
                 user = userMapper.getNew();
             }
-            res.render('index', {
-                "user": user
+            var auth = TwitterHelper.getAuth(req);
+            oauth.get("http://api.twitter.com/1/account/rate_limit_status.json", auth.getToken(), auth.getSecret(), function(err, data) {
+                if (err) {
+                    throw err;
+                }
+                var parsedData = JSON.parse(data);
+                res.render('index', {
+                    "user": user,
+                    "apiInfo": parsedData
+                });
             });
         });
     });

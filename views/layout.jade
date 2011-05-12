@@ -8,3 +8,7 @@ body
     #content
 
     !{body}
+
+    - if (apiInfo)
+        #apiInfo
+            API requests remaining: #{apiInfo.remaining_hits} - renews at #{apiInfo.reset_time}
