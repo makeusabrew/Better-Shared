@@ -1,5 +1,6 @@
 var OAuth = require("oauth").OAuth,
-    util = require("util");
+    util = require("util"),
+    TwitterHelper = require('./helper/twitter');
 
 var oauth = new OAuth(
     'https://api.twitter.com/oauth/request_token',
@@ -16,8 +17,9 @@ module.exports = function(app) {
      * Home Page
      */
     app.get('/', function(req, res) {
+        var user = TwitterHelper.getAuth(req);
         res.render('index', {
-            authed: false
+            user: user
         });
     });
 

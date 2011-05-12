@@ -10,7 +10,7 @@ ul
     li Share and share alike!
 
 #favourites
-    - if (authed === true)
+    - if (user.isAuthed() === true)
         p well done, authed
     - else
         p not authed

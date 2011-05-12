@@ -4,8 +4,8 @@ var express = require('express'),
 
 var app = express.createServer();
 
-require('./config')(app);
+require('./app/config')(app);
 
-require('./routes')(app);
+require('./app/routes')(app);
 
 app.listen(8124);
