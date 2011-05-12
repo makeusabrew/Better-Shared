@@ -1,6 +1,8 @@
 var OAuth = require("oauth").OAuth,
     util = require("util"),
-    TwitterHelper = require('./helper/twitter');
+    TwitterHelper = require('./helper/twitter'),
+    UserMapper = require('./models/mappers/user');
+
 
 var oauth = new OAuth(
     'https://api.twitter.com/oauth/request_token',
@@ -59,6 +61,25 @@ module.exports = function(app) {
             // long live the cookies!
             util.debug("oauth_access_token ["+oauth_access_token+"] - oauth_access_token_secret ["+oauth_access_token_secret+"]");
             res.cookie('auth', JSON.stringify({"token":oauth_access_token, "secret":oauth_access_token_secret}));
+
+            oauth.get("http://api.twitter.com/1/account/verify_credentials.json", oauth_access_token, oauth_access_token_secret, function(err, data) {
+                if (err) {
+                    return res.send(err);
+                }
+
+                var parsedData = JSON.parse(data);
+
+                var userMapper = new UserMapper();
+                userMapper.getByTwitterId(parsedData.id, function(user) {
+                    if (user === null) {
+                        // new user
+                        userMapper.createNew(parsedData, function(user) {
+                            // got user by now, defo
+                            util.debug("created new user");
+                        });
+                    }
+                });
+            });
             res.redirect('/');
         });
     });
