@@ -11,6 +11,6 @@ ul
 
 #favourites
     - if (user.isAuthed() === true)
-        p well done, authed
+        p Hi #{user.getDisplayName()}!
     - else
         p not authed
