@@ -19,9 +19,19 @@ module.exports = function(app) {
      * Home Page
      */
     app.get('/', function(req, res) {
-        var user = TwitterHelper.getAuth(req);
-        res.render('index', {
-            user: user
+        var userMapper = new UserMapper();
+        util.debug("*** "+req.session.user_id);
+        userMapper.getByTwitterId(req.session.user_id, function(user) {
+            // did we get a user?
+            if (user !== null) {
+                // yep, so we're defo authed
+                user.setAuthed(true);
+            } else {
+                user = userMapper.getNew();
+            }
+            res.render('index', {
+                "user": user
+            });
         });
     });
 
@@ -77,10 +87,14 @@ module.exports = function(app) {
                             // got user by now, defo
                             util.debug("created new user");
                         });
+                        res.redirect('/');
+                    } else {
+                        util.debug("got user from DB ["+user.getDisplayName()+"]");
+                        req.session.user_id = user.getId();
+                        res.redirect('/');
                     }
                 });
             });
-            res.redirect('/');
         });
     });
 }

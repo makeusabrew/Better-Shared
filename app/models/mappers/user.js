@@ -21,10 +21,11 @@ module.exports = function() {
                 }
                 if (typeof result === 'undefined') {
                     callback(null);
-                }
-                var user = new User(result);
-                if (typeof callback === 'function') {
-                    callback(user);
+                } else {
+                    var user = new User(result);
+                    if (typeof callback === 'function') {
+                        callback(user);
+                    }
                 }
             });
         });
@@ -48,4 +49,8 @@ module.exports = function() {
             });
         });
     };
+
+    this.getNew = function() {
+        return new User();
+    }
 }

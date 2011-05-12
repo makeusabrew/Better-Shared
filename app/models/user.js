@@ -8,4 +8,20 @@ module.exports = function(data) {
             _properties[i] = data[i];
         }
     }
+
+    this.getDisplayName = function() {
+        return _properties.screen_name;
+    }
+
+    this.getId = function() {
+        return _properties.id;
+    }
+
+    this.setAuthed = function(authed) {
+        _authed = authed;
+    }
+
+    this.isAuthed = function() {
+        return _authed;
+    }
 }
