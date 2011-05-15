@@ -10,5 +10,5 @@ body
 
     !{body}
 
-    - if (apiInfo)
+    - if (typeof apiInfo === 'object')
         #apiInfo Twitter API requests remaining: #{apiInfo.remaining_hits} - last renewed at #{apiInfo.reset_time}

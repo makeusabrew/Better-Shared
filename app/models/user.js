@@ -24,4 +24,8 @@ module.exports = function(data) {
     this.isAuthed = function() {
         return _authed;
     }
+
+    this.getFavourites = function() {
+        return _properties.favourites;
+    }
 }

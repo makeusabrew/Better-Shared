@@ -23,9 +23,25 @@ module.exports = function() {
                     callback(null);
                 } else {
                     var user = new User(result);
-                    if (typeof callback === 'function') {
-                        callback(user);
-                    }
+                    callback(user);
+                }
+            });
+        });
+    };
+
+    this.getByUsername = function(username, callback) {
+        db.collection(_collection, function(err, collection) {
+            if (err) {
+                throw err;
+            }
+            collection.findOne({'screen_name':username}, function(err, result) {
+                if (err) throw err;
+
+                if (typeof result === 'undefined') {
+                    callback(null);
+                } else {
+                    var user = new User(result);
+                    callback(user);
                 }
             });
         });
@@ -40,12 +56,25 @@ module.exports = function() {
                 if (err) {
                     throw err;
                 }
-                // what is docs?
-                util.debug(JSON.stringify(docs));
                 var user = new User(docs);
                 if (typeof callback === 'function') {
                     callback(user);
                 }
+            });
+        });
+    };
+
+    this.updateFavourites = function(id, data, callback) {
+        db.collection(_collection, function(err, collection) {
+            if (err) throw err;
+
+            collection.update({'id':id}, {"$pushAll": {"favourites": data}}, function(err, doc) {
+                if (err) throw err;
+
+                util.debug("updated user favourites");
+
+                var user = new User(doc);
+                callback(user);
             });
         });
     };

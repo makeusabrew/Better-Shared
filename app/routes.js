@@ -1,7 +1,8 @@
 var OAuth = require("oauth").OAuth,
     util = require("util"),
     TwitterHelper = require('./helper/twitter'),
-    UserMapper = require('./models/mappers/user');
+    UserMapper = require('./models/mappers/user'),
+    redis = require('redis');
 
 
 var oauth = new OAuth(
@@ -14,21 +15,57 @@ var oauth = new OAuth(
     'HMAC-SHA1'
 );
 
+// just grab one instance of a userMapper for now (todo: staticify?)
+var userMapper = new UserMapper();
+
+// redis pub/sub clients
+var client1 = redis.createClient();
+var client2 = redis.createClient();
+
+client1.subscribe("get_favourites_backlog");
+client1.on("message", function(channel, message) {
+    util.debug(message);
+    message = JSON.parse(message);
+    switch (channel) {
+        case 'get_favourites_backlog':
+            userMapper.getByTwitterId(message.twitter_id, function(user) {
+                var qStr = "http://api.twitter.com/1/favorites/"+user.getId()+".json?entities=true&page="+message.page;
+                util.debug("GETting "+qStr);
+                oauth.get(qStr, message.token, message.secret, function(err, data) {
+                    if (err) throw err;
+
+                    data = JSON.parse(data);
+
+                    if (data.length) {
+                        util.debug("got ["+data.length+"] favourites for page ["+message.page+"]");
+                        userMapper.updateFavourites(user.getId(), data, function(user) {
+                            util.debug("updated favourites");
+                            client2.publish("get_favourites_backlog", JSON.stringify({
+                                "twitter_id": message.twitter_id,
+                                "page": ++message.page,
+                                "token": message.token,
+                                "secret": message.secret
+                            }));
+                        });
+                    } else {
+                        util.debug("got no more tweets - backlog complete");
+                    }
+                });
+            });
+            break;
+        default:
+            throw new Error('Unknown channel ['+channel+']');
+            break;
+    }
+});
+
 module.exports = function(app) {
     /**
      * Home Page
      */
-    app.get('/', function(req, res) {
-        var userMapper = new UserMapper();
+    app.get('/', authState('any'), function(req, res) {
         util.debug("*** "+req.session.user_id);
-        userMapper.getByTwitterId(req.session.user_id, function(user) {
-            // did we get a user?
-            if (user !== null) {
-                // yep, so we're defo authed
-                user.setAuthed(true);
-            } else {
-                user = userMapper.getNew();
-            }
+        if (req.activeUser.isAuthed()) {
             var auth = TwitterHelper.getAuth(req);
             oauth.get("http://api.twitter.com/1/account/rate_limit_status.json", auth.getToken(), auth.getSecret(), function(err, data) {
                 if (err) {
@@ -36,11 +73,15 @@ module.exports = function(app) {
                 }
                 var parsedData = JSON.parse(data);
                 res.render('index', {
-                    "user": user,
+                    "activeUser": req.activeUser,
                     "apiInfo": parsedData
                 });
             });
-        });
+        } else {
+            res.render('index', {
+                "activeUser": req.activeUser
+            });
+        }
     });
 
     /**
@@ -87,15 +128,21 @@ module.exports = function(app) {
 
                 var parsedData = JSON.parse(data);
 
-                var userMapper = new UserMapper();
                 userMapper.getByTwitterId(parsedData.id, function(user) {
                     if (user === null) {
                         // new user
                         userMapper.createNew(parsedData, function(user) {
                             // got user by now, defo
-                            util.debug("created new user");
+                            util.debug("created new user - adding favourites backlog message to queue");
+                            client2.publish("get_favourites_backlog", JSON.stringify{
+                                "twitter_id": parsedData.id,
+                                "page": 1,
+                                "token": oauth_access_token,
+                                "secret": oauth_access_token_secret
+                            }));
+                            req.session.user_id = user.getId();
+                            res.redirect('/');
                         });
-                        res.redirect('/');
                     } else {
                         util.debug("got user from DB ["+user.getDisplayName()+"]");
                         req.session.user_id = user.getId();
@@ -105,4 +152,49 @@ module.exports = function(app) {
             });
         });
     });
+
+    app.get('/user/:username', authState('any'), function(req, res) {
+        res.render('user', {
+            "activeUser": req.activeUser,
+            "favourites": req.activeUser.getFavourites(),
+            "user": req.user
+        });
+    });
+
+    /**
+     * param pre-conditions
+     */
+
+     app.param('username', function(req, res, next, username) {
+        userMapper.getByUsername(username, function(user) {
+            if (user === null) {
+                return next(new Error('Could not find user'));
+            }
+            req.user = user;
+            next();
+        });
+    });
+
+    // pre-route checks
+    function authState(authed) {
+        return function(req, res, next) {
+            userMapper.getByTwitterId(req.session.user_id, function(user) {
+                if (user !== null) {
+                    user.setAuthed(true);
+                } else {
+                    user = userMapper.getNew();
+                }
+                req.activeUser = user;
+                if (authed === 'any') {
+                    next();
+                } else {
+                    if (req.activeUser.isAuthed() !== authed) {
+                        next(new Error('Incorrect auth state ['+req.activeUser.isAuthed().toString()+']'));
+                    } else {
+                        next();
+                    }
+                }
+            });
+        }
+    }
 }

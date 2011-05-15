@@ -10,7 +10,7 @@ ul
     li You can browse, search and rate other people's lists and share &amp; share alike!
 
 #favourites
-    - if (user.isAuthed() === true)
-        p Hi #{user.getDisplayName()}!
+    - if (activeUser.isAuthed() === true)
+        p Hi #{activeUser.getDisplayName()}!
     - else
         p not authed
