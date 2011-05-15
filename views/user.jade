@@ -1,4 +1,6 @@
-h2 #{user.getDisplayName()}'s favourites
+h2 #{user.getDisplayName()}'s <strong>#{user.get('favourites_count')}</strong> favourites
 
 - each favourite in favourites
-    div #{favourite.text}
+    div(class='favtweet')
+        span(class='author')#{favourite.user.screen_name}
+        #{favourite.text}

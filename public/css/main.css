@@ -8,3 +8,11 @@
     color:#fff;
     padding:0.25em;
 }
+
+.author:before {
+    content:"@";
+}
+
+.author:after {
+    content:": ";
+}

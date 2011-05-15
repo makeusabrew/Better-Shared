@@ -1,28 +1,25 @@
-p Hi there! Let's get started.
-ul
-    li
-        | Simply 
-        a(href='/auth') connect
-        |  your twitter account with Better Shared 
-
-    li We'll fetch your favourited tweets and show them on your own personal page
-
-    li You can browse, search and rate other people's lists and share &amp; share alike!
-
-#favourites
-    - if (activeUser.isAuthed() === true)
-        - if (newUser)
-            p
-                | Hi 
-                strong #{activeUser.getDisplayName()}
-                | ! We're busily fetching your
-                strong #{activeUser.get('favourites_count')} 
-                | favourited tweets from Twitter. This shouldn't take too long but please 
-                | be patient! You can check the progress on your <a href="/user/#{activeUser.getDisplayName()}">favourites page</a>.
-        - else
-            p
-                | Welcome back 
-                strong #{activeUser.getDisplayName()}
-                | !
+- if (activeUser.isAuthed() === true)
+    - if (newUser)
+        p
+            | Hi 
+            strong #{activeUser.getDisplayName()}
+            | ! We're busily fetching your
+            strong #{activeUser.get('favourites_count')} 
+            | favourited tweets from Twitter. This shouldn't take too long but please 
+            | be patient! You can check the progress on your <a href="/user/#{activeUser.getDisplayName()}">favourites page</a>.
     - else
-        p not authed
+        p
+            | Welcome back 
+            strong #{activeUser.getDisplayName()}
+            | ! Why not head over to your <a href="/user/#{activeUser.getDisplayName()}">favourites page</a>?
+- else
+    p Hi there! Let's get started.
+    ol
+        li
+            | Simply 
+            a(href='/auth') connect
+            |  your Twitter account with Better Shared 
+
+        li We'll fetch your favourited tweets and start crunching through them
+
+        li When ready, your favourited tweets will be shown on your own personal page
