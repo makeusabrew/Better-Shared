@@ -56,10 +56,23 @@ module.exports = function() {
                 if (err) {
                     throw err;
                 }
-                var user = new User(docs);
+                var user = new User(data);
                 if (typeof callback === 'function') {
                     callback(user);
                 }
+            });
+        });
+    };
+
+    this.updateById = function(id, data, callback) {
+        db.collection(_collection, function(err, collection) {
+            if (err) throw err;
+
+            collection.update({'id':id}, data, function(err) {
+                if (err) throw err;
+
+                var user = new User(data);
+                callback(user);
             });
         });
     };

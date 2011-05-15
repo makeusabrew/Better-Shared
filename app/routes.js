@@ -18,47 +18,6 @@ var oauth = new OAuth(
 // just grab one instance of a userMapper for now (todo: staticify?)
 var userMapper = new UserMapper();
 
-// redis pub/sub clients
-var client1 = redis.createClient();
-var client2 = redis.createClient();
-
-client1.subscribe("get_favourites_backlog");
-client1.on("message", function(channel, message) {
-    util.debug(message);
-    message = JSON.parse(message);
-    switch (channel) {
-        case 'get_favourites_backlog':
-            userMapper.getByTwitterId(message.twitter_id, function(user) {
-                var qStr = "http://api.twitter.com/1/favorites/"+user.getId()+".json?entities=true&page="+message.page;
-                util.debug("GETting "+qStr);
-                oauth.get(qStr, message.token, message.secret, function(err, data) {
-                    if (err) throw err;
-
-                    data = JSON.parse(data);
-
-                    if (data.length) {
-                        util.debug("got ["+data.length+"] favourites for page ["+message.page+"]");
-                        userMapper.updateFavourites(user.getId(), data, function(user) {
-                            util.debug("updated favourites");
-                            client2.publish("get_favourites_backlog", JSON.stringify({
-                                "twitter_id": message.twitter_id,
-                                "page": ++message.page,
-                                "token": message.token,
-                                "secret": message.secret
-                            }));
-                        });
-                    } else {
-                        util.debug("got no more tweets - backlog complete");
-                    }
-                });
-            });
-            break;
-        default:
-            throw new Error('Unknown channel ['+channel+']');
-            break;
-    }
-});
-
 module.exports = function(app) {
     /**
      * Home Page
@@ -138,7 +97,7 @@ module.exports = function(app) {
                         userMapper.createNew(parsedData, function(user) {
                             // got user by now, defo
                             util.debug("created new user - adding favourites backlog message to queue");
-                            client2.publish("get_favourites_backlog", JSON.stringify({
+                            pubClient.publish("get_favourites_backlog", JSON.stringify({
                                 "twitter_id": parsedData.id,
                                 "page": 1,
                                 "token": oauth_access_token,
@@ -148,9 +107,22 @@ module.exports = function(app) {
                             res.redirect('/?welcome');
                         });
                     } else {
-                        util.debug("got user from DB ["+user.getDisplayName()+"]");
-                        req.session.user_id = user.getId();
-                        res.redirect('/');
+                        var cachedCount = user.get('favourites_count');
+                        util.debug("got user from DB ["+user.getDisplayName()+"] with cached favourites count ["+cachedCount+"]");
+
+                        //@todo improve this - make sure we preserve user's favourites
+                        parsedData.favourites = user.getFavourites();
+
+                        userMapper.updateById(parsedData.id, parsedData, function(user) {
+                            if (user.get('favourites_count') != cachedCount) {
+                                util.debug("new favourites count ["+user.get('favourites_count')+"] differs from cache - queuing fetch");
+                                pubClient.publish("get_new_favourites", JSON.stringify({
+                                    "twitter_id": parsedData.id
+                                }));
+                            }
+                            req.session.user_id = user.getId();
+                            res.redirect('/');
+                        });
                     }
                 });
             });
@@ -160,7 +132,7 @@ module.exports = function(app) {
     app.get('/user/:username', authState('any'), function(req, res) {
         res.render('user', {
             "activeUser": req.activeUser,
-            "favourites": req.activeUser.getFavourites(),
+            "favourites": req.user.getFavourites(),
             "user": req.user
         });
     });
@@ -202,3 +174,55 @@ module.exports = function(app) {
         }
     }
 }
+
+/**
+ * pub / sub bits. shouldn't be here, but we need to find a nice way to share the clients
+ */
+var client = redis.createClient();
+var pubClient = redis.createClient();
+
+client.subscribe("get_favourites_backlog");
+client.subscribe("get_new_favourites");
+
+client.on("message", function(channel, message) {
+    util.debug(message);
+    message = JSON.parse(message);
+    switch (channel) {
+        case 'get_favourites_backlog':
+            userMapper.getByTwitterId(message.twitter_id, function(user) {
+                var qStr = "http://api.twitter.com/1/favorites/"+user.getId()+".json?entities=true&page="+message.page;
+                util.debug("GETting "+qStr);
+                oauth.get(qStr, message.token, message.secret, function(err, data) {
+                    if (err) throw err;
+
+                    data = JSON.parse(data);
+
+                    if (data.length) {
+                        util.debug("got ["+data.length+"] favourites for page ["+message.page+"]");
+                        userMapper.updateFavourites(user.getId(), data, function(user) {
+                            util.debug("updated favourites");
+                            if (data.length == 20) {
+                                pubClient.publish("get_favourites_backlog", JSON.stringify({
+                                    "twitter_id": message.twitter_id,
+                                    "page": ++message.page,
+                                    "token": message.token,
+                                    "secret": message.secret
+                                }));
+                            } else {
+                                util.debug("didn't get enough tweets to bother requesting another page - backlog complete");
+                            }
+                        });
+                    } else {
+                        util.debug("got no more tweets - backlog complete");
+                    }
+                });
+            });
+            break;
+        case 'get_new_favourites':
+            // nothing yet
+            break;
+        default:
+            throw new Error('Unknown channel ['+channel+']');
+            break;
+    }
+});
