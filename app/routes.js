@@ -72,9 +72,13 @@ module.exports = function(app) {
                     throw err;
                 }
                 var parsedData = JSON.parse(data);
+                var date = new Date();
+                var resetMinutes = Math.floor((parsedData.reset_time_in_seconds - Math.floor(date.getTime() / 1000)) / 60);
+                parsedData.reset_friendly_string = resetMinutes +" minutes";
                 res.render('index', {
                     "activeUser": req.activeUser,
-                    "apiInfo": parsedData
+                    "apiInfo": parsedData,
+                    "newUser": (typeof req.query.welcome !== 'undefined')
                 });
             });
         } else {
@@ -134,14 +138,14 @@ module.exports = function(app) {
                         userMapper.createNew(parsedData, function(user) {
                             // got user by now, defo
                             util.debug("created new user - adding favourites backlog message to queue");
-                            client2.publish("get_favourites_backlog", JSON.stringify{
+                            client2.publish("get_favourites_backlog", JSON.stringify({
                                 "twitter_id": parsedData.id,
                                 "page": 1,
                                 "token": oauth_access_token,
                                 "secret": oauth_access_token_secret
                             }));
                             req.session.user_id = user.getId();
-                            res.redirect('/');
+                            res.redirect('/?welcome');
                         });
                     } else {
                         util.debug("got user from DB ["+user.getDisplayName()+"]");

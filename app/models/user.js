@@ -28,4 +28,8 @@ module.exports = function(data) {
     this.getFavourites = function() {
         return _properties.favourites;
     }
+
+    this.get = function(key) {
+        return _properties[key];
+    }
 }

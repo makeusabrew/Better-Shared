@@ -2,6 +2,7 @@
 html(lang="en")
     head
     title Better Shared
+    link(href='/css/inuit.css', rel='stylesheet', type='text/css')
     link(href='/css/main.css', rel='stylesheet', type='text/css')
     script(src='https://ajax.googleapis.com/ajax/libs/jquery/1.6.0/jquery.min.js')
 body
@@ -11,4 +12,4 @@ body
     !{body}
 
     - if (typeof apiInfo === 'object')
-        #apiInfo Twitter API requests remaining: #{apiInfo.remaining_hits} - last renewed at #{apiInfo.reset_time}
+        #apiInfo Twitter API requests remaining: #{apiInfo.remaining_hits}/#{apiInfo.hourly_limit} - next reset in #{apiInfo.reset_friendly_string}

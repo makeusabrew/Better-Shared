@@ -11,6 +11,18 @@ ul
 
 #favourites
     - if (activeUser.isAuthed() === true)
-        p Hi #{activeUser.getDisplayName()}!
+        - if (newUser)
+            p
+                | Hi 
+                strong #{activeUser.getDisplayName()}
+                | ! We're busily fetching your
+                strong #{activeUser.get('favourites_count')} 
+                | favourited tweets from Twitter. This shouldn't take too long but please 
+                | be patient! You can check the progress on your <a href="/user/#{activeUser.getDisplayName()}">favourites page</a>.
+        - else
+            p
+                | Welcome back 
+                strong #{activeUser.getDisplayName()}
+                | !
     - else
         p not authed
