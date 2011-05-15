@@ -1,3 +1,10 @@
 #apiInfo {
     font-size:80%;
+    position:fixed;
+    bottom:0;
+    right:0;
+    background-color:#0084B4;
+    border:1px solid #9ae4e8;
+    color:#fff;
+    padding:0.25em;
 }
