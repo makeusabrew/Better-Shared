@@ -107,7 +107,7 @@ module.exports = function(app) {
                             res.redirect('/?welcome');
                         });
                     } else {
-                        var cachedCount = user.get('favourites_count');
+                        var cachedCount = user.getFavouritesCount();
                         util.debug("got user from DB ["+user.getDisplayName()+"] with cached favourites count ["+cachedCount+"]");
 
                         //@todo improve this - make sure we preserve user's favourites
@@ -117,7 +117,10 @@ module.exports = function(app) {
                             if (user.get('favourites_count') != cachedCount) {
                                 util.debug("new favourites count ["+user.get('favourites_count')+"] differs from cache - queuing fetch");
                                 pubClient.publish("get_new_favourites", JSON.stringify({
-                                    "twitter_id": parsedData.id
+                                    "twitter_id": user.getId(),
+                                    "since_id": user.getLatestFavouriteId(),
+                                    "token": oauth_access_token,
+                                    "secret": oauth_access_token_secret
                                 }));
                             }
                             req.session.user_id = user.getId();
@@ -199,7 +202,17 @@ client.on("message", function(channel, message) {
 
                     if (data.length) {
                         util.debug("got ["+data.length+"] favourites for page ["+message.page+"]");
-                        userMapper.updateFavourites(user.getId(), data, function(user) {
+
+                        var uData = user.getData();
+                        if (typeof uData.favourites === 'undefined') {
+                            uData.favourites = [];
+                        }
+
+                        for (var i = 0, j = data.length; i < j; i++) {
+                            uData.favourites.push(data[i]);
+                        }
+
+                        userMapper.updateById(user.getId(), uData, function(user) {
                             util.debug("updated favourites");
                             if (data.length == 20) {
                                 pubClient.publish("get_favourites_backlog", JSON.stringify({
@@ -219,7 +232,45 @@ client.on("message", function(channel, message) {
             });
             break;
         case 'get_new_favourites':
-            // nothing yet
+            userMapper.getByTwitterId(message.twitter_id, function(user) {
+                var qStr = "http://api.twitter.com/1/favorites/"+user.getId()+".json?entities=true&since_id="+message.since_id
+                util.debug("GETting "+qStr);
+                oauth.get(qStr, message.token, message.secret, function(err, data) {
+                    if (err) throw err;
+
+                    data = JSON.parse(data);
+
+                    if (data.length) {
+                        // @todo don't forget, we need a way of working out if we got *all* tweets
+                        // since the one we were after!
+
+                        var uData = user.getData();
+                        if (typeof uData.favourites === 'undefined') {
+                            uData.favourites = [];
+                        }
+
+                        for (var i = data.length-1; i >= 0; i--) {
+                            uData.favourites.unshift(data[i]);
+                        }
+
+                        userMapper.updateById(user.getId(), uData, function(user) {
+                            /* do we need more?
+                            if (allTweets == false) {
+                                // ah, it's not. too many tweets!
+                                pubClient.publish("get_new_favourites", JSON.stringify({
+                                    "twitter_id": message.twitter_id,
+                                    "since_id": data[data.length-1].id,
+                                    "token": message.token,
+                                    "secret": message.secret
+                                }));
+                            }
+                            */
+                        });
+                    } else {
+                        util.debug("got no more tweets");
+                    }
+                });
+            });
             break;
         default:
             throw new Error('Unknown channel ['+channel+']');

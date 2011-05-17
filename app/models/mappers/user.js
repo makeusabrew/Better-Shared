@@ -77,6 +77,7 @@ module.exports = function() {
         });
     };
 
+    /* no likey
     this.updateFavourites = function(id, data, callback) {
         db.collection(_collection, function(err, collection) {
             if (err) throw err;
@@ -91,6 +92,7 @@ module.exports = function() {
             });
         });
     };
+    */
 
     this.getNew = function() {
         return new User();

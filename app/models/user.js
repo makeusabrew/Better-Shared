@@ -26,10 +26,28 @@ module.exports = function(data) {
     }
 
     this.getFavourites = function() {
-        return _properties.favourites;
+        return _properties.favourites || [];
     }
 
     this.get = function(key) {
         return _properties[key];
+    }
+
+    this.getFavouritesCount = function() {
+        if (typeof _properties.favourites === 'undefined') {
+            return 0;
+        }
+        return _properties.favourites.length;
+    }
+
+    this.getLatestFavouriteId = function() {
+        if (typeof _properties.favourites === 'undefined') {
+            return 0;
+        }
+        return _properties.favourites[0].id;
+    }
+
+    this.getData = function() {
+        return _properties;
     }
 }

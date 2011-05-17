@@ -10,13 +10,9 @@
 }
 
 .favtweet {
-    padding:1em;
+    padding:1em 0;
 }
 
-.author:before {
-    content:"@";
-}
-
-.author:after {
-    content:": ";
+.favtweet .text {
+    font-size:140%;
 }

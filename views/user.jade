@@ -1,6 +1,7 @@
-h2 #{user.getDisplayName()}'s <strong>#{user.get('favourites_count')}</strong> favourites
+h2 #{user.getDisplayName()}'s <strong>#{user.getFavouritesCount()}</strong> favourites
 
 - each favourite in favourites
     div(class='favtweet')
-        span(class='author')#{favourite.user.screen_name}
-        #{favourite.text}
+        div(class='text')
+            #{favourite.text}
+        span(class='author')<a href="http://twitter.com/#{favourite.user.screen_name}">@#{favourite.user.screen_name}</a>
