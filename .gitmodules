@@ -4,4 +4,4 @@
 
 [submodule "twitter-async"]
 	path = apps/twitterusers/deps/twitter-async
-    url = https://github.com/jmathai/twitter-async.git
+    url = git://github.com/jmathai/twitter-async.git
