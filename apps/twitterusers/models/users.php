@@ -7,6 +7,8 @@ class User extends Object {
      */
     protected $isAuthed = false;
 
+    protected $preferences = null;
+
     /**
      * bung this user's ID in the session
      */
@@ -96,6 +98,30 @@ class User extends Object {
 
     public function getFavourites() {
         return Table::factory('Favourites')->findAllForUser($this->getId());
+    }
+
+    public function getPreferences() {
+        if ($this->preferences === null) {
+            $this->preferences = array();
+
+            $preferences = Table::factory('UserPreferences')->findAllForUser($this->getId());
+            foreach ($preferences as $preference) {
+                $this->preferences[$preference->key] = $preference;
+            }
+        }
+        return $this->preferences;
+    }
+
+    public function getPreference($key) {
+        $preferences = $this->getPreferences();
+        return isset($preferences[$key]) ? $preferences[$key]->value : null;
+    }
+
+    public function clearPreferences() {
+        $preferences = $this->getPreferences();
+        foreach ($preferences as $preference) {
+            $preference->delete();
+        }
     }
 }
 

@@ -17,7 +17,7 @@
     <ul id="nav">
         <li><a href="/">home</a></li>
         {if $user->isAuthed()}
-            {* authed only options coming soon... *}
+            <li><a href="/me">settings</a></li>
         {else}
             <li><a href="/login">login</a></li>
         {/if}

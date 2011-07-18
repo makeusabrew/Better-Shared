@@ -192,4 +192,26 @@ class UsersController extends AbstractController {
     public function account() {
         //
     }
+
+    public function update_account() {
+        if (!$this->request->isPost()) {
+            return $this->redirect("/");
+        }
+
+        // @todo figure out validation for awkward one-to-manys like this where validation differs
+        // based on key
+        // @todo make this more performant too - lots of DB queries to delete then add individually...
+        $this->user->clearPreferences();
+        $data = array_intersect_key($this->request->getPost(), array('email' => true, 'email_digests' => true));
+        foreach ($data as $key => $value) {
+            $preference = Table::factory('UserPreferences')->newObject();
+            $preference->setValues(array(
+                'user_id' => $this->user->getId(),
+                'key' => $key,
+                'value' => $value,
+            ));
+            $preference->save();
+        }
+        return $this->redirectAction("account", "Settings Updated");
+    }
 }
