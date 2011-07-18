@@ -74,6 +74,29 @@ class User extends Object {
         ));
         return $retweet ? true : false;
     }
+
+    public function hasFavouriteId($favourite_id) {
+        $favourite = Table::factory('UserFavourites')->find(array(
+            'user_id' => $this->getId(),
+            'favourite_id' => $favourite_id,
+        ));
+        return $favourite ? true : false;
+    }
+
+    public function addFavouriteId($favourite_id) {
+        $userFavourite = Table::factory('UserFavourites')->newObject();
+        $userFavourite->setValues(array(
+            'user_id' => $this->getId(),
+            'favourite_id' => $favourite_id,
+        ));
+        $userFavourite->save();
+        Log::debug('adding favourite ID ['.$favourite_id.'] to user\'s list');
+        return $userFavourite->getId();
+    }
+
+    public function getFavourites() {
+        return Table::factory('Favourites')->findAllForUser($this->getId());
+    }
 }
 
 class Users extends Table {

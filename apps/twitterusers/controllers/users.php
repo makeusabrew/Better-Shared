@@ -100,33 +100,6 @@ class UsersController extends AbstractController {
             $user->save();
         } else {
             Log::debug('authenticating known user ['.$details->screen_name.']');
-            // okay, we know about this user - they've been here before and we have them in our DB
-            if ($this->user->isGuest()) {
-                // balls, this user's logged in as a guest.
-                // if they've voted, and the DB user hasn't, then fine
-                // if they haven't voted, and the db user has, then fine
-                // what if BOTH have voted?
-                // both voted is quite likely, because if they're already in the DB then they've been using
-                // the system. and if they're a guest, then it's because.. well, they've voted
-                // So, let's check: have the users ever voted on the same stuff?
-                $votes = count(Table::factory('Votes')->findAllForBothUsers($user->getId(), $this->user->getId()));
-                if ($votes > 0) {
-                    // bad luck, we can't merge
-                    Log::debug('can\'t merge guest user\'s votes with db user\'s because ['.$votes.'] votes overlap');
-                    // by doing nothing we effectively orphan this guest account (we're about to add the DB row to session)
-                    // which is a pity because it'll clutter up DB space, but it preserves vote integrity
-                } else if (($votes = count(Table::factory('Votes')->findAllForUserWhereQuestionOwnedByOtherUser($this->user->getId(), $user->getId()))) > 0) {
-                    // ah bugger, no overlap, but some questions we voted on as a guest are owned by the user we're now authing as - bail
-                    Log::debug('can\'t merge guest user\'s votes with db user\'s because ['.$votes.'] votes are on DB user\'s own questions');
-                } else {
-                    // superb - no overlap :)
-                    Log::debug('merging guest user votes into db user votes');
-                    // let's be honest, the below is just an UPDATE
-                    $this->user->convertVotesToUser($user->getId());
-                    $this->user->delete();
-                }
-            }
-
             // as you were
             if ($details->screen_name != $user->username ||
                 $details->profile_image_url != $user->profile_image_url ||
@@ -146,6 +119,62 @@ class UsersController extends AbstractController {
 
         // sets cookies too
         $user->addToSession();
+        $this->user = $user;
+
+        //
+        // @todo obviously we shouldn't really be fetching *all* favourites like this on login!
+        //
+        try {
+            $favourites = $twitterObj->get('/favorites/'.$this->user->username.'.json', array('include_entities' => true, 'count' => 200));
+        } catch (EpiTwitterException $e) {
+            // deal with it properly...
+            die($e->getMessage());
+        }
+        foreach ($favourites as $favourite) {
+            //echo $favourite->id_str;
+            $favObj = Table::factory('Favourites')->findByTwitterId($favourite->id_str);
+            if ($favObj === false) {
+                // new favourite, bang it in
+                $favObj = Table::factory('Favourites')->newObject();
+                $data = array(
+                    'created_at' => $favourite->created_at,
+                    'twitter_id' => $favourite->id_str,
+                    'text' => $favourite->text,
+                    'author_username' => $favourite->user->screen_name,
+                    'author_id' => $favourite->user->id,
+                    'source' => $favourite->source,
+                    'reply_username' => $favourite->in_reply_to_screen_name,
+                    'reply_id' => $favourite->in_reply_to_status_id_str,
+                );
+                $favObj->setValues($data);
+                $favObj->save();
+                Log::debug('added favourite with id ['.$favObj->getId().']');
+                if (isset($favourite->entities->urls) && is_array($favourite->entities->urls)) {
+                    foreach ($favourite->entities->urls as $url) {
+                        $data = array(
+                            'favourite_id' => $favObj->getId(),
+                            'url' => $url->url,
+                            'indices' => implode(',', $url->indices),
+                        );
+                        if (isset($url->display_url)) {
+                            $data['display_url'] = $url->display_url;
+                        }
+                        if (isset($url->expanded_url)) {
+                            $data['expanded_url'] = $url->expanded_url;
+                        }
+                        $urlObj = Table::factory('FavouriteUrls')->newObject();
+                        $urlObj->setValues($data);
+                        $urlObj->save();
+                        Log::debug('added URL ['.$url->url.'] for favourite ['.$favObj->getId().']');
+                    }
+                }
+            }
+
+            // ok, lovely. is this favourite in the user's list already?
+            if ($this->user->hasFavouriteId($favObj->getId()) === false) {
+                $this->user->addFavouriteId($favObj->getId());
+            }
+        }
 
         $message = "Hi, <strong>".$user->username."</strong>!";
 
