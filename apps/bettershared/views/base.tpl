@@ -5,6 +5,23 @@
     <title>{setting value="site.title"}{if isset($title)}: - {$title}{/if}</title>
 </head>
 <body>
+    {if isset($messages) && count($messages)}
+        <div id='messageOuter'>
+            {foreach from=$messages item="message"}
+                <div class='message'>
+                    {$message}
+                </div>
+            {/foreach}
+        </div>
+    {/if}
+    <ul id="nav">
+        <li><a href="/">home</a></li>
+        {if $user->isAuthed()}
+            {* authed only options coming soon... *}
+        {else}
+            <li><a href="/login">login</a></li>
+        {/if}
+    </ul>
     {block name="body"}<p>Your body content goes here.</p>{/block}
 
     {*
