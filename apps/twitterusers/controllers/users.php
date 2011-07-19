@@ -165,7 +165,34 @@ class UsersController extends AbstractController {
                         $urlObj = Table::factory('FavouriteUrls')->newObject();
                         $urlObj->setValues($data);
                         $urlObj->save();
-                        Log::debug('added URL ['.$url->url.'] for favourite ['.$favObj->getId().']');
+                    }
+                }
+
+                if (isset($favourite->entities->user_mentions) && is_array($favourite->entities->user_mentions)) {
+                    foreach ($favourite->entities->user_mentions as $mention) {
+                        $data = array(
+                            'favourite_id' => $favObj->getId(),
+                            'author_id' => $mention->id,
+                            'screen_name' => $mention->screen_name,
+                            'name' => isset($mention->name) ? $mention->name : '',
+                            'indices' => implode(',', $mention->indices),
+                        );
+                        $mentionObj = Table::factory('FavouriteUserMentions')->newObject();
+                        $mentionObj->setValues($data);
+                        $mentionObj->save();
+                    }
+                }
+
+                if (isset($favourite->entities->hashtags) && is_array($favourite->entities->hashtags)) {
+                    foreach ($favourite->entities->hashtags as $hashtag) {
+                        $data = array(
+                            'favourite_id' => $favObj->getId(),
+                            'text' => $hashtag->text,
+                            'indices' => implode(',', $hashtag->indices),
+                        );
+                        $hashtagObj = Table::factory('FavouriteHashtags')->newObject();
+                        $hashtagObj->setValues($data);
+                        $hashtagObj->save();
                     }
                 }
             }
