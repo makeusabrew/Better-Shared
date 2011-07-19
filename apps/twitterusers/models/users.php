@@ -210,4 +210,19 @@ class Users extends Table {
         $user->save();
         return $user;
     }
+
+    public function findAllForFavourite($favourite_id) {
+        $sql = "SELECT ".$this->getColumnString("u")." FROM `users` u
+        INNER JOIN `user_favourites`
+        ON (u.id=user_favourites.user_id)
+        WHERE user_favourites.favourite_id = ?";
+
+        $params = array($favourite_id);
+
+		$dbh = Db::getInstance();
+		$sth = $dbh->prepare($sql);
+		$sth->setFetchMode(PDO::FETCH_CLASS, "User");
+        $sth->execute($params);
+        return $sth->fetchAll();
+    }
 }

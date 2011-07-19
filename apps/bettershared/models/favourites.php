@@ -1,6 +1,12 @@
 <?php
 
 class Favourite extends Object {
+    public function getNumberOfTimesFavourited() {
+        $count = Table::factory('UserFavourites')->countAll(array(
+            'favourite_id' => $this->getId(),
+        ));
+        return $count;
+    }
 }
 
 class Favourites extends Table {
