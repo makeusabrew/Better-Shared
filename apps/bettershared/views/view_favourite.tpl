@@ -11,4 +11,11 @@
             by {$noFavourite} user{if $noFavourites != 1}s{/if}
         {/if}
     </div>
+
+    <div class='digest'>
+        {foreach from=$favourite->getDigests() item="digest"}
+            {$digest->title}
+            {$digest->getBody()|nl2br}
+        {/foreach}
+    </div>
 {/block}

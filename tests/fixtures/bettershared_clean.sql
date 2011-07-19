@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Jul 18, 2011 at 06:49 PM
+-- Generation Time: Jul 19, 2011 at 04:01 PM
 -- Server version: 5.1.54
 -- PHP Version: 5.3.5-1ubuntu7.2
 
@@ -71,6 +71,28 @@ CREATE TABLE IF NOT EXISTS `favourite_urls` (
 
 --
 -- Dumping data for table `favourite_urls`
+--
+
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `favourite_url_digests`
+--
+
+DROP TABLE IF EXISTS `favourite_url_digests`;
+CREATE TABLE IF NOT EXISTS `favourite_url_digests` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `favourite_url_id` int(10) unsigned NOT NULL,
+  `title` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `content` text COLLATE utf8_unicode_ci NOT NULL,
+  `created` datetime NOT NULL,
+  `updated` datetime NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=1 ;
+
+--
+-- Dumping data for table `favourite_url_digests`
 --
 
 

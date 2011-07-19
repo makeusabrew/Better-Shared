@@ -7,6 +7,46 @@ class Favourite extends Object {
         ));
         return $count;
     }
+
+    public function getDigests() {
+        $urls = Table::factory('FavouriteUrls')->findAll(array(
+            'favourite_id' => $this->getId(),
+        ));
+        $digests = array();
+        foreach ($urls as $url) {
+            $target = isset($url->expanded_url) ? $url->expanded_url : $url->url;
+            $digest = Table::factory('FavouriteUrlDigests')->findForUrl($url->getId());
+            if ($digest === false) {
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL, $target);
+                //curl_setopt($ch, CURLOPT_COOKIEJAR, '/tmp/cookies.txt');
+                //curl_setopt($ch, CURLOPT_COOKIEFILE, '/tmp/cookies.txt');
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, TRUE);
+                curl_setopt($ch, CURLOPT_AUTOREFERER, TRUE);
+                curl_setopt($ch, CURLOPT_USERAGENT, "Better Shared Bot");
+                $result = curl_exec($ch);
+
+                $dom = new DomDocument();
+                try {
+                    $dom->loadHTML($result);
+                } catch (ErrorException $e) {
+                    // grim. we have to ignore parse errors
+                }
+                $title = $dom->getElementsByTagName('title')->item(0)->nodeValue;
+
+                $digest = Table::factory('FavouriteUrlDigests')->newObject();
+                $digest->setValues(array(
+                    'favourite_url_id' => $url->getId(),
+                    'title' => $title,
+                    'content' => $result,
+                ));
+                $digest->save();
+            }
+            $digests[] = $digest;
+            return $digests;
+        }
+    }
 }
 
 class Favourites extends Table {
